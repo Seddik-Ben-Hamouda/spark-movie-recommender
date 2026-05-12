@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineML — Recommandations Spark MLlib</title>
+<style>
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red: #e50914;
+  --dark: #141414;
+  --surface: #181818;
+  --card: #232323;
+  --gold: #e8b84b;
+  --text: #ffffff;
+  --muted: #b3b3b3;
+  --blue: #4a9eff;
+  --green: #46d369;
+  --border: #2a2a2a;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--dark);
+  color: var(--text);
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── NAVBAR ── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  height: 64px;
+  padding: 0 5%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+  transition: background 0.3s;
+}
+nav.solid { background: var(--dark); border-bottom: 1px solid var(--border); }
+
+.logo {
+  font-size: 1.9rem;
+  font-weight: 900;
+  color: var(--red);
+  letter-spacing: -1px;
+  text-decoration: none;
+}
+.logo em { color: var(--text); font-style: normal; font-weight: 300; }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.nav-badge {
+  background: var(--red);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  height: 92vh;
+  min-height: 520px;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 5% 9%;
+  overflow: hidden;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, var(--dark) 0%, rgba(20,20,20,0.5) 40%, transparent 70%),
+    linear-gradient(105deg, rgba(229,9,20,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 35%, #1a0508 0%, #0a0a14 50%, #000 100%);
+}
+
+/* floating orbs */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: pulse 6s ease-in-out infinite alternate;
+}
+.orb1 { width: 600px; height: 600px; background: rgba(229,9,20,0.12); top: -100px; right: 0; animation-delay: 0s; }
+.orb2 { width: 400px; height: 400px; background: rgba(74,158,255,0.06); bottom: 0; right: 200px; animation-delay: 2s; }
+.orb3 { width: 300px; height: 300px; background: rgba(232,184,75,0.06); top: 100px; right: 400px; animation-delay: 4s; }
+
+@keyframes pulse {
+  from { opacity: 0.6; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.1); }
+}
+
+.hero-content { position: relative; z-index: 2; max-width: 580px; }
+
+.hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(229,9,20,0.15);
+  border: 1px solid rgba(229,9,20,0.3);
+  border-radius: 3px;
+  padding: 5px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #ff6b6b;
+  margin-bottom: 18px;
+}
+.hero-kicker .dot { width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: blink 1.2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.hero-title {
+  font-size: clamp(2rem, 5.5vw, 3.8rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.8);
+}
+.hero-title .red { color: var(--red); }
+
+.hero-desc {
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.65;
+  margin-bottom: 22px;
+  max-width: 460px;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 28px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.hstat .n { font-size: 1.7rem; font-weight: 900; color: var(--red); line-height: 1; }
+.hstat .l { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+.hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 26px;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-family: inherit;
+  text-decoration: none;
+}
+.btn-white { background: #fff; color: #141414; }
+.btn-white:hover { background: rgba(255,255,255,0.78); }
+.btn-gray { background: rgba(109,109,110,0.55); color: #fff; }
+.btn-gray:hover { background: rgba(109,109,110,0.8); }
+
+/* ── METRICS ROW ── */
+.metrics {
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.metric {
+  flex: 1;
+  min-width: 130px;
+  text-align: center;
+  padding: 18px 12px;
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+.metric:last-child { border-right: none; }
+.metric .v {
+  font-size: 1.55rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--red);
+}
+.metric .v.g { color: var(--green); }
+.metric .v.b { color: var(--blue); }
+.metric .n { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+.metric .s { font-size: 0.62rem; color: #444; margin-top: 2px; }
+
+/* ── TABS ── */
+.tabs-bar {
+  display: flex;
+  padding: 0 5%;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.3);
+  position: sticky;
+  top: 64px;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.tab {
+  padding: 14px 22px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--text); }
+.tab.on { color: var(--text); border-bottom-color: var(--red); }
+
+.panel { display: none; }
+.panel.on { display: block; }
+
+/* ── CONTROLS ── */
+.controls {
+  padding: 22px 5% 10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ctrl-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+
+select, .search-input {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: var(--text);
+  border-radius: 4px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.18s;
+  font-family: inherit;
+}
+select:focus, .search-input:focus { border-color: var(--text); }
+
+.search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 300px; }
+.search-input { width: 100%; padding-left: 34px; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.78rem; pointer-events: none; color: var(--muted); }
+
+.sort-group { display: flex; gap: 4px; margin-left: auto; }
+.sort-btn {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: var(--muted);
+  padding: 8px 13px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.sort-btn.on, .sort-btn:hover { border-color: var(--red); color: var(--text); }
+
+/* ── SECTION ── */
+.sect { padding: 20px 5% 36px; }
+
+.sect-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.sect-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.sect-bar { width: 4px; height: 22px; background: var(--red); border-radius: 2px; }
+
+.pill {
+  background: #2a2a2a;
+  color: var(--muted);
+  font-size: 0.72rem;
+  padding: 3px 10px;
+  border-radius: 10px;
+}
+
+/* ── GRID ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  position: relative;
+  animation: fadeUp 0.3s ease both;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(10px) scale(0.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+.card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+  z-index: 5;
+}
+
+.card-thumb {
+  width: 100%;
+  aspect-ratio: 16/9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.6rem;
+  position: relative;
+  overflow: hidden;
+}
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 60%);
+}
+.card-rank-badge {
+  position: absolute;
+  top: 6px; left: 8px;
+  font-size: 0.6rem; font-weight: 900;
+  background: rgba(0,0,0,0.7);
+  color: rgba(255,255,255,0.7);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+.card-score-badge {
+  position: absolute;
+  top: 6px; right: 8px;
+  font-size: 0.68rem; font-weight: 700;
+  background: var(--red);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+
+.card-body { padding: 10px 12px 13px; }
+.card-year { font-size: 0.68rem; color: var(--green); font-weight: 700; margin-bottom: 4px; }
+.card-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.stars { display: flex; gap: 2px; margin-bottom: 6px; }
+.star { font-size: 0.68rem; color: #3a3a3a; }
+.star.on { color: var(--gold); }
+.card-progress { height: 3px; background: #3a3a3a; border-radius: 2px; overflow: hidden; }
+.card-progress-fill { height: 100%; background: var(--red); border-radius: 2px; }
+
+/* ── TOP LIST ── */
+.top-list { display: flex; flex-direction: column; gap: 6px; }
+
+.top-row {
+  background: var(--card);
+  border-radius: 4px;
+  padding: 13px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: background 0.18s;
+}
+.top-row:hover { background: #2a2a2a; }
+
+.top-num {
+  font-size: 2rem;
+  font-weight: 900;
+  font-style: italic;
+  color: #2e2e2e;
+  width: 38px;
+  text-align: right;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.top-num.hi { color: var(--red); }
+
+.top-info { flex: 1; min-width: 0; }
+.top-info .t {
+  font-weight: 700;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top-info .m { font-size: 0.72rem; color: var(--green); margin-top: 2px; }
+
+.top-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.top-score { font-size: 1.15rem; font-weight: 900; color: var(--red); }
+.top-bar { width: 80px; height: 3px; background: #3a3a3a; border-radius: 2px; overflow: hidden; }
+.top-bar-fill { height: 100%; background: var(--red); border-radius: 2px; }
+
+/* ── CV PANEL ── */
+.cv-panel { padding: 28px 5% 40px; }
+
+.cv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 640px; margin-bottom: 24px; }
+.cv-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+.cv-card.best { border-color: var(--green); }
+.cv-card .cl { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.cv-card .cv { font-size: 2rem; font-weight: 900; color: var(--red); line-height: 1; }
+.cv-card.best .cv { color: var(--green); }
+.cv-card .cs { font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
+
+.impr-badge {
+  display: inline-block;
+  background: var(--green);
+  color: #141414;
+  font-weight: 900;
+  font-size: 1.05rem;
+  padding: 10px 22px;
+  border-radius: 4px;
+  margin-bottom: 24px;
+}
+
+.param-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; max-width: 500px; }
+.param-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+}
+.param-card .pk { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.param-card .pv { font-size: 0.9rem; font-weight: 700; color: var(--red); }
+
+/* ── FACTORS PANEL ── */
+.factors-panel { padding: 28px 5% 40px; }
+
+.factor-matrices { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 520px; margin-bottom: 28px; }
+.fmat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+.fmat .fl { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.fmat .fv { font-size: 1.9rem; font-weight: 900; color: var(--red); line-height: 1; }
+.fmat .fs { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
+
+.factor-top { max-width: 600px; }
+.factor-row {
+  background: var(--card);
+  border-radius: 4px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.factor-rank { font-size: 1.1rem; font-weight: 900; font-style: italic; color: #2e2e2e; width: 22px; text-align: center; }
+.factor-rank.hi { color: var(--red); }
+.factor-title { flex: 1; font-size: 0.9rem; font-weight: 600; }
+.factor-score { font-size: 0.9rem; font-weight: 900; color: var(--red); }
+
+.interp-box {
+  margin-top: 20px;
+  max-width: 600px;
+  background: var(--card);
+  border-left: 3px solid var(--red);
+  border-radius: 0 6px 6px 0;
+  padding: 14px 18px;
+}
+.interp-box .ib-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--red); margin-bottom: 7px; }
+.interp-box p { font-size: 0.87rem; color: var(--muted); line-height: 1.65; }
+
+/* ── EMPTY / LOADING ── */
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty .ei { font-size: 3rem; margin-bottom: 12px; }
+.empty code { display: inline-block; background: #2a2a2a; padding: 3px 8px; border-radius: 3px; font-size: 0.82rem; margin-top: 8px; color: var(--text); }
+.loading { text-align: center; padding: 60px; color: var(--muted); font-size: 0.95rem; }
+
+/* ── FOOTER ── */
+footer {
+  background: #0a0a0a;
+  border-top: 1px solid var(--border);
+  padding: 30px 5%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px,1fr));
+  gap: 24px;
+  margin-top: 40px;
+}
+footer h4 { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+footer p { font-size: 0.8rem; color: #4a4a4a; line-height: 1.7; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--dark); }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+@media (max-width: 768px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); }
+  .cv-grid, .factor-matrices { grid-template-columns: 1fr; }
+  .param-grid { grid-template-columns: 1fr 1fr; }
+  .hero-title { font-size: 2rem; }
+  .hero-stats { gap: 16px; }
+  .metrics { flex-wrap: wrap; }
+  .metric { min-width: 110px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <a class="logo" href="#">Cine<em>ML</em></a>
+  <div class="nav-links">
+    <span>Spark MLlib</span>
+    <span>·</span>
+    <span>ALS</span>
+    <span>·</span>
+    <span>MovieLens 100K</span>
+    <span class="nav-badge">Projet 3</span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-kicker">
+      <span class="dot"></span>
+      Système de Recommandation Distribué
+    </div>
+    <h1 class="hero-title">
+      Recommandations<br>
+      de Films avec<br>
+      <span class="red">Spark MLlib</span>
+    </h1>
+    <p class="hero-desc">
+      Pipeline ALS complet — exploration, nettoyage, entraînement,
+      cross-validation et déploiement sur MovieLens 100K.
+    </p>
+    <div class="hero-stats">
+      <div class="hstat"><div class="n">943</div><div class="l">Utilisateurs</div></div>
+      <div class="hstat"><div class="n" id="h-films">—</div><div class="l">Films uniques</div></div>
+      <div class="hstat"><div class="n" id="h-recs">—</div><div class="l">Recommandations</div></div>
+      <div class="hstat"><div class="n">0.82</div><div class="l">RMSE (CV)</div></div>
+    </div>
+    <div class="hero-actions">
+      <button class="btn btn-white" onclick="scrollToControls()">▶ Explorer</button>
+      <button class="btn btn-gray" onclick="openTab('cv', document.querySelectorAll('.tab')[1])">ⓘ Résultats CV</button>
+    </div>
+  </div>
+</section>
+
+<!-- METRICS -->
+<div class="metrics">
+  <div class="metric"><div class="v">0.9209</div><div class="n">RMSE défaut</div><div class="s">Modèle baseline</div></div>
+  <div class="metric"><div class="v g">0.8212</div><div class="n">RMSE optimal</div><div class="s">Après cross-validation</div></div>
+  <div class="metric"><div class="v">0.7291</div><div class="n">MAE</div><div class="s">Erreur absolue moyenne</div></div>
+  <div class="metric"><div class="v b">0.3323</div><div class="n">R²</div><div class="s">Variance expliquée</div></div>
+  <div class="metric"><div class="v g">+10.83%</div><div class="n">Amélioration</div><div class="s">Gain via CV</div></div>
+  <div class="metric"><div class="v">5</div><div class="n">Best rank</div><div class="s">Facteurs latents</div></div>
+  <div class="metric"><div class="v">18</div><div class="n">Configs CV</div><div class="s">ParamGridBuilder</div></div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-bar">
+  <button class="tab on" onclick="openTab('recs',this)">🎬 Recommandations</button>
+  <button class="tab" onclick="openTab('cv',this)">📊 Cross-Validation</button>
+  <button class="tab" onclick="openTab('factors',this)">🧬 Facteurs Latents</button>
+</div>
+
+<!-- PANEL: RECS -->
+<div class="panel on" id="panel-recs">
+
+  <div class="controls" id="controls-anchor">
+    <span class="ctrl-label">Utilisateur</span>
+    <select id="userSel"><option>Chargement…</option></select>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="searchBox" type="text" placeholder="Rechercher un film…">
+    </div>
+    <div class="sort-group">
+      <button class="sort-btn on" onclick="doSort('score',this)">Score ↓</button>
+      <button class="sort-btn" onclick="doSort('title',this)">A → Z</button>
+      <button class="sort-btn" onclick="doSort('year',this)">Année</button>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="sect-head">
+      <div class="sect-title">
+        <div class="sect-bar"></div>
+        <span id="sect-label">Sélectionnez un utilisateur</span>
+      </div>
+      <span class="pill" id="film-count">— films</span>
+    </div>
+    <div class="grid" id="movie-grid">
+      <div class="loading">Chargement des recommandations…</div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <div class="sect-head">
+      <div class="sect-title">
+        <div class="sect-bar"></div>
+        <span>🏆 Top 10 — Scores les plus élevés</span>
+      </div>
+    </div>
+    <div class="top-list" id="top-list"></div>
+  </div>
+
+</div>
+
+<!-- PANEL: CV -->
+<div class="panel" id="panel-cv">
+  <div class="cv-panel">
+    <div class="sect-head">
+      <div class="sect-title"><div class="sect-bar"></div><span>Résultats de la Cross-Validation</span></div>
+    </div>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:22px;max-width:580px;line-height:1.65">
+      18 configurations testées avec 3 folds (3 × rank · 2 × maxIter · 3 × regParam).
+      Le meilleur modèle obtient <strong style="color:var(--text)">rank = 5</strong> et améliore le RMSE de 10.83%.
+    </p>
+
+    <div class="cv-grid">
+      <div class="cv-card">
+        <div class="cl">Modèle par défaut</div>
+        <div class="cv">0.9209</div>
+        <div class="cs">rank=10 · maxIter=10 · regParam=0.1</div>
+      </div>
+      <div class="cv-card best">
+        <div class="cl">Meilleur modèle (CV)</div>
+        <div class="cv">0.8212</div>
+        <div class="cs">rank=5 · sélectionné automatiquement</div>
+      </div>
+    </div>
+
+    <div class="impr-badge">▲ 10.83 % d'amélioration sur le RMSE</div>
+
+    <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Grille de paramètres testée</div>
+    <div class="param-grid">
+      <div class="param-card"><div class="pk">Rank</div><div class="pv">5 · 10 · 15</div></div>
+      <div class="param-card"><div class="pk">MaxIter</div><div class="pv">5 · 10</div></div>
+      <div class="param-card"><div class="pk">RegParam</div><div class="pv">0.01 · 0.1 · 0.5</div></div>
+    </div>
+
+    <div style="margin-top:28px;max-width:580px;background:var(--card);border-left:3px solid var(--red);border-radius:0 6px 6px 0;padding:14px 18px">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--red);margin-bottom:7px">Pourquoi rank=5 est optimal ?</div>
+      <p style="font-size:0.87rem;color:var(--muted);line-height:1.65">
+        Un rank plus faible (5 vs 10) réduit le sur-apprentissage sur un dataset sparse comme MovieLens.
+        Le modèle capture les préférences essentielles sans mémoriser le bruit des données d'entraînement.
+        La cross-validation à 3 folds garantit que ce résultat est robuste et reproductible.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL: FACTORS -->
+<div class="panel" id="panel-factors">
+  <div class="factors-panel">
+    <div class="sect-head">
+      <div class="sect-title"><div class="sect-bar"></div><span>Analyse des Facteurs Latents ALS</span></div>
+    </div>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:24px;max-width:580px;line-height:1.65">
+      ALS décompose la matrice utilisateurs-films R en deux matrices U × V<sup>T</sup>.
+      Chaque colonne est une dimension latente apprise automatiquement par le modèle.
+    </p>
+
+    <div class="factor-matrices">
+      <div class="fmat">
+        <div class="fl">Matrice Utilisateurs</div>
+        <div class="fv">943 × 5</div>
+        <div class="fs">943 utilisateurs · 5 dimensions latentes</div>
+      </div>
+      <div class="fmat">
+        <div class="fl">Matrice Films</div>
+        <div class="fv">1682 × 5</div>
+        <div class="fs">1 682 films · 5 dimensions latentes</div>
+      </div>
+    </div>
+
+    <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Top films — Facteur latent 0 (axe dominant)</div>
+    <div class="factor-top" id="factor-list"></div>
+
+    <div class="interp-box">
+      <div class="ib-title">Interprétation métier</div>
+      <p>
+        Le <strong style="color:var(--text)">facteur 0</strong> sépare les films de niche des films grand public.
+        Les valeurs élevées correspondent à des films rarement notés mais très appréciés d'un sous-groupe d'utilisateurs.
+        Les autres dimensions capturent probablement le <em>genre</em>, l'<em>époque</em> et le <em>style cinématographique</em>.
+        Ces vecteurs sont la représentation interne apprise par ALS — non interprétables directement mais mathématiquement cohérents.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <h4>Projet</h4>
+    <p>Projet 3 — Système de Recommandation avec Spark MLlib · Niveau intermédiaire ⭐⭐⭐</p>
+  </div>
+  <div>
+    <h4>Technologies</h4>
+    <p>Apache Spark 3.5.8 · Scala 2.12.18 · Spark MLlib ALS · Spark SQL</p>
+  </div>
+  <div>
+    <h4>Résultats</h4>
+    <p>RMSE 0.8212 après CV · 9 430 recommandations · +10.83% · Rank optimal = 5</p>
+  </div>
+  <div>
+    <h4>Livrables</h4>
+    <p>MovieRecommender.scala · PredictNewUser.scala · Rapport PDF · Web UI Netflix</p>
+  </div>
+</footer>
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let allData = [];
+let currentUser = null;
+let currentSort = 'score';
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const year  = t => { const m = t.match(/\((\d{4})\)/); return m ? m[1] : '—'; };
+const clean = t => t.replace(/\s*\(\d{4}\)\s*$/, '').trim();
+const pct   = (s, mn=2, mx=7) => Math.min(100, Math.max(0, (s-mn)/(mx-mn)*100)).toFixed(1);
+
+const EMOJIS = { war:'⚔️', love:'💕', star:'🚀', space:'🚀', horror:'👻', dead:'👻',
+  music:'🎵', song:'🎵', child:'🎠', toy:'🎠', crime:'🔍', murder:'🔍', comedy:'😄' };
+function emoji(title) {
+  const t = title.toLowerCase();
+  for (const [k,v] of Object.entries(EMOJIS)) if (t.includes(k)) return v;
+  return ['🎬','🎭','🎥','🎞️','📽️','🎦'][title.length % 6];
+}
+
+const GRADS = [
+  'linear-gradient(135deg,#1a0508,#2a0810)',
+  'linear-gradient(135deg,#050a1a,#08102a)',
+  'linear-gradient(135deg,#051a08,#082a10)',
+  'linear-gradient(135deg,#1a1505,#2a1e08)',
+  'linear-gradient(135deg,#1a0518,#2a0828)',
+];
+const bg = t => GRADS[t.length % GRADS.length];
+
+function stars(score, mn=2, mx=7) {
+  const n = Math.min(5, Math.max(0, (score-mn)/(mx-mn)*5));
+  return Array.from({length:5},(_,i)=>`<span class="star${i<Math.round(n)?' on':''}">\u2605</span>`).join('');
+}
+
+// ── NAVBAR SCROLL ─────────────────────────────────────────────────────────────
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('solid', scrollY > 50);
+});
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function openTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('panel-'+name).classList.add('on');
+}
+
+function scrollToControls() {
+  document.getElementById('controls-anchor').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── SORT ──────────────────────────────────────────────────────────────────────
+function doSort(s, btn) {
+  currentSort = s;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  if (currentUser) showUser(currentUser);
+}
+
+// ── RENDER GRID ───────────────────────────────────────────────────────────────
+function renderGrid(movies) {
+  const g = document.getElementById('movie-grid');
+  if (!movies.length) {
+    g.innerHTML = '<div class="empty"><div class="ei">🎬</div><p>Aucun film trouvé</p></div>';
+    return;
+  }
+  g.innerHTML = movies.map((m,i) => `
+    <div class="card" style="animation-delay:${(i*0.022).toFixed(2)}s">
+      <div class="card-thumb" style="background:${bg(m.title)}">
+        <span>${emoji(m.title)}</span>
+        <div class="card-overlay"></div>
+        <div class="card-rank-badge">#${i+1}</div>
+        <div class="card-score-badge">${m.score.toFixed(2)}</div>
+      </div>
+      <div class="card-body">
+        <div class="card-year">${m.year}</div>
+        <div class="card-title">${m.cleanTitle}</div>
+        <div class="stars">${stars(m.score)}</div>
+        <div class="card-progress"><div class="card-progress-fill" style="width:${pct(m.score)}%"></div></div>
+      </div>
+    </div>`).join('');
+}
+
+// ── SHOW USER ─────────────────────────────────────────────────────────────────
+function showUser(uid) {
+  currentUser = uid;
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  let movies = allData.filter(d => d.userId === uid);
+  if (q) movies = movies.filter(m => m.cleanTitle.toLowerCase().includes(q));
+  if (currentSort === 'score') movies.sort((a,b) => b.score - a.score);
+  else if (currentSort === 'title') movies.sort((a,b) => a.cleanTitle.localeCompare(b.cleanTitle));
+  else movies.sort((a,b) => (b.year||0) - (a.year||0));
+
+  document.getElementById('sect-label').textContent = `Recommandations — Utilisateur ${uid}`;
+  document.getElementById('film-count').textContent = `${movies.length} film${movies.length!==1?'s':''}`;
+  renderGrid(movies);
+}
+
+// ── TOP LIST ──────────────────────────────────────────────────────────────────
+function renderTopList(data) {
+  const top = [...data].sort((a,b)=>b.score-a.score).slice(0,10);
+  const mx  = top[0].score;
+  document.getElementById('top-list').innerHTML = top.map((m,i) => `
+    <div class="top-row">
+      <div class="top-num${i<3?' hi':''}">${i+1}</div>
+      <div class="top-info">
+        <div class="t">${m.cleanTitle}</div>
+        <div class="m">${m.year} · User ${m.userId}</div>
+      </div>
+      <div class="top-right">
+        <div class="top-score">${m.score.toFixed(3)}</div>
+        <div class="top-bar"><div class="top-bar-fill" style="width:${(m.score/mx*100).toFixed(0)}%"></div></div>
+      </div>
+    </div>`).join('');
+}
+
+// ── FACTOR LIST ───────────────────────────────────────────────────────────────
+function renderFactors() {
+  const films = [
+    {t:'Sliding Doors (1998)',           s:1.1076},
+    {t:'The Old Lady Who Walked... (1991)',s:1.0036},
+    {t:'Turbo: Power Rangers (1997)',    s:1.0091},
+    {t:'8 Heads in a Duffel Bag (1997)',s:0.9888},
+    {t:'Chairman of the Board (1998)',   s:0.9163},
+    {t:'Hurricane Streets (1998)',        s:0.8852},
+    {t:'Kull the Conqueror (1997)',       s:0.8470},
+    {t:'Frisk (1995)',                    s:0.8325},
+  ];
+  const mx = films[0].s;
+  document.getElementById('factor-list').innerHTML = films.map((f,i) => `
+    <div class="factor-row">
+      <div class="factor-rank${i<3?' hi':''}">${i+1}</div>
+      <div class="factor-title">${f.t}</div>
+      <div class="factor-score">${f.s.toFixed(4)}</div>
+    </div>`).join('');
+}
+
+// ── PARSE CSV ─────────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  return text.trim().split('\n').slice(1).map(line => {
+    const f = line.indexOf(','), l = line.lastIndexOf(',');
+    const userId = line.substring(0,f).trim();
+    const title  = line.substring(f+1,l).trim().replace(/\r/g,'');
+    const score  = parseFloat(line.substring(l+1));
+    return { userId, title, score, cleanTitle: clean(title), year: year(title) };
+  }).filter(r => r.userId && !isNaN(r.score));
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderFactors();
+
+fetch('data/recommendations.csv')
+  .then(r => r.text())
+  .then(text => {
+    allData = parseCSV(text);
+
+    const users = [...new Set(allData.map(d=>d.userId))].sort((a,b)=>+a-+b);
+    const titles = new Set(allData.map(d=>d.cleanTitle));
+
+    document.getElementById('h-films').textContent = titles.size.toLocaleString();
+    document.getElementById('h-recs').textContent  = allData.length.toLocaleString();
+
+    const sel = document.getElementById('userSel');
+    sel.innerHTML = users.map(u=>`<option value="${u}">Utilisateur ${u}</option>`).join('');
+    sel.onchange = () => showUser(sel.value);
+
+    document.getElementById('searchBox').oninput = () => { if(currentUser) showUser(currentUser); };
+
+    renderTopList(allData);
+    showUser(users[0]);
+  })
+  .catch(() => {
+    document.getElementById('movie-grid').innerHTML = `
+      <div class="empty">
+        <div class="ei">⚠️</div>
+        <p>Lancez un serveur local puis ouvrez localhost:8000</p>
+        <code>python -m http.server 8000</code>
+      </div>`;
+  });
+</script>
+</body>
+</html>
